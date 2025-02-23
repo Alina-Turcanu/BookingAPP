@@ -1,20 +1,24 @@
 package booking.Services;
 
-import booking.Dtos.ReservationRequestDTO;
-import booking.Dtos.ReservationResponseDTO;
-import booking.Dtos.ReservationResponseDTObyRoomType;
-import booking.Dtos.UserRequestDTO;
+import booking.Dtos.*;
 import booking.Entities.*;
-import booking.Repositories.HotelRepository;
-import booking.Repositories.ReservationRepository;
-import booking.Repositories.RoomRepository;
-import booking.Repositories.UserRepository;
+import booking.Exceptions.ResourceNotFoundException;
+import booking.Repositories.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,55 +29,128 @@ public class UserService {
     private ReservationRepository reservationRepository;
 
     private UserRepository userRepository;
+
     private HotelRepository hotelRepository;
 
+    private RoleRepository roleRepository;
+
+    private PasswordEncoder passwordEncoder;
+
+    private AuthenticationManager authenticationManager;
+
+    private UserDetailsServiceImpl userDetailsService;
+
+    private JwtTokenService jwtTokenService;
+
+    private EmailService emailService;
+
     @Autowired
-    public UserService(RoomRepository roomRepository, ReservationRepository reservationRepository, UserRepository userRepository, HotelRepository hotelRepository) {
+    public UserService(RoomRepository roomRepository, ReservationRepository reservationRepository, UserRepository userRepository, HotelRepository hotelRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, UserDetailsServiceImpl userDetailsService, JwtTokenService jwtTokenService,EmailService emailService) {
         this.roomRepository = roomRepository;
         this.reservationRepository = reservationRepository;
         this.userRepository = userRepository;
         this.hotelRepository = hotelRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.userDetailsService = userDetailsService;
+        this.jwtTokenService = jwtTokenService;
+        this.emailService=emailService;
     }
 
     @Transactional
-    public User addUser(UserRequestDTO userRequestDTO) {
+    public AuthResponseDTO register(AuthRequestDTO authRequestDTO) {
         User user = new User();
-        user.setName(userRequestDTO.getName());
-        user.setEmail(userRequestDTO.getEmail());
-        return userRepository.save(user);
+        user.setUsername(authRequestDTO.getUsername());
+        user.setPassword(passwordEncoder.encode(authRequestDTO.getPassword()));
+
+        // Caută rolul ROLE_USER în baza de date
+        Role role = roleRepository.findByRoleType(RoleType.ROLE_USER)
+                .orElseThrow(() -> new RuntimeException("Role USER not found"));
+
+        // Adaugă rolul utilizatorului
+        user.getRoles().add(role);
+
+        // Adaugă utilizatorul în lista rolului (opțional)
+        role.getUsers().add(user);
+        user.setEmail(authRequestDTO.getEmail());
+        User savedUser = userRepository.save(user);
+        return mapFromUserToAuthResponseDTO(savedUser);
     }
 
     @Transactional
-    public ReservationResponseDTO bookRoom(ReservationRequestDTO reservationRequestDTO) {
-        LocalDate startDate = reservationRequestDTO.getStartDate();
-        LocalDate endDate = reservationRequestDTO.getEndDate();
+    public AuthResponseDTO mapFromUserToAuthResponseDTO(User user) {
+        AuthResponseDTO authResponseDTO = new AuthResponseDTO();
+        authResponseDTO.setId(user.getId());
+        authResponseDTO.setUsername(user.getUsername());
+        authResponseDTO.setPassword(user.getPassword());
+        authResponseDTO.setEmail(user.getEmail());
+        return authResponseDTO;
+    }
 
-        // Verificare dacă startDate este înainte de endDate
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Data de început trebuie să fie înainte de data de sfârșit.");
+    public String authenticate(AuthRequestDTO authRequestDTO) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(authRequestDTO.getUsername(), authRequestDTO.getPassword())
+        );
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(authRequestDTO.getUsername());
+        String token = jwtTokenService.generateToken(userDetails);
+        return token;
+    }
+
+    @Transactional
+    public UserResponseDTO findLoggedInUser() {
+        String usernameLoggedIn = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // Căutăm utilizatorul în baza de date
+        User user = userRepository.findByUsername(usernameLoggedIn)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Creăm și returnăm UserResponseDTO
+        return new UserResponseDTO(user.getId(),user.getUsername(),user.getEmail());
+    }
+
+    @Transactional
+    public ReservationResponseDTO bookRoom(ReservationRequestDTO request) {
+        // Găsește utilizatorul
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Găsește hotelul
+        Hotel hotel = hotelRepository.findById(request.getHotelId())
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found"));
+
+        // Găsește camera
+        Room room = roomRepository.findById(request.getRoomId())
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
+
+        // Verifică dacă camera aparține hotelului specificat
+        if (!room.getHotel().getHotelId().equals(hotel.getHotelId())) {
+            throw new IllegalArgumentException("Camera nu aparține hotelului specificat!");
         }
 
-        Long roomId = reservationRequestDTO.getRoomId();
-
-        boolean isReserved = reservationRepository.existsByRoomAndDateOverlap(roomId, startDate, endDate);
-        if (isReserved) {
-            throw new IllegalArgumentException("Camera este deja rezervată pentru perioada specificată.");
-        }
+        // Calculează prețul total
+        long daysBetween = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
+        double price = room.getPricePerNight() * daysBetween;
 
         Reservation reservation = new Reservation();
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Camera cu ID-ul " + roomId + " nu există."));
-        User user = userRepository.findById(reservationRequestDTO.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("Utilizatorul cu ID-ul " + reservationRequestDTO.getUserId() + " nu există."));
-        reservation.setRoom(room);
         reservation.setUser(user);
-        reservation.setStartDate(startDate);
-        reservation.setEndDate(endDate);
-        reservation.setHotel(room.getHotel());
+        reservation.setRoom(room);
+        reservation.setHotel(hotel);
+        reservation.setStartDate(request.getStartDate());
+        reservation.setEndDate(request.getEndDate());
+        reservationRepository.save(reservation);
 
-        Reservation savedReservation = reservationRepository.save(reservation);
-        return mapFromReservationToReservationResponseDTO(savedReservation);
+        emailService.sendBookingConfirmationAsync(
+                user.getEmail(),
+                hotel.getName(),
+                room.getRoomNumber(),
+                request.getStartDate(),
+                request.getEndDate(),
+                price
+        );
 
+        return mapFromReservationToReservationResponseDTO(reservation);
     }
 
     @Transactional
@@ -87,6 +164,9 @@ public class UserService {
 
         return !hasOverlappingReservation;
     }
+
+
+
     @Transactional
     public ReservationResponseDTObyRoomType bookRoomByType(RoomType roomType, LocalDate firstDay, LocalDate lastDay, Long userId,Long hotelId) {
 

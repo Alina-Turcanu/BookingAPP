@@ -13,6 +13,9 @@ import java.time.LocalDate;
 
 public class ReservationRequestDTO {
 
+
+    private Long hotelId;
+
     private Long roomId;
 
     private Long userId;
@@ -25,13 +28,20 @@ public class ReservationRequestDTO {
 
 
     public ReservationRequestDTO(Long hotelId,Long roomId, Long userId, LocalDate startDate, LocalDate endDate) {
+        this.hotelId=hotelId;
         this.roomId = roomId;
         this.userId = userId;
         this.startDate = startDate;
         this.endDate = endDate;
     }
 
+    public Long getHotelId() {
+        return hotelId;
+    }
 
+    public void setHotelId(Long hotelId) {
+        this.hotelId = hotelId;
+    }
 
     public Long getRoomId() {
         return roomId;

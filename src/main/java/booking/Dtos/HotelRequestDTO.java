@@ -4,7 +4,7 @@ public class HotelRequestDTO {
 
     private String name;
 
-    public HotelRequestDTO(String name) {
+    public HotelRequestDTO( String name) {
         this.name = name;
     }
 

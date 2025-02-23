@@ -18,27 +18,19 @@ public class Hotel {
     private String name;
 
 
-    @OneToMany(mappedBy = "hotel",cascade = CascadeType.ALL)
-    private List<Room> rooms=new ArrayList<>();
-
+    @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Room> rooms = new ArrayList<>();
 
     @OneToMany(mappedBy = "hotel")
     private List<Reservation>reservations=new ArrayList<>();
 
-
-    @ManyToOne
-    @JoinColumn(name = "hotelAdministrator")
-    private HotelAdministrator hotelAdministrator;
-
-
     public Hotel() {
     }
 
-    public Hotel(Long hotelId, String name, List<Room> rooms, HotelAdministrator hotelAdministrator) {
+    public Hotel(Long hotelId, String name, List<Room> rooms) {
         this.hotelId = hotelId;
         this.name = name;
         this.rooms = rooms;
-        this.hotelAdministrator = hotelAdministrator;
     }
 
     public Long getHotelId() {
@@ -64,12 +56,5 @@ public class Hotel {
     public void setRooms(List<Room> rooms) {
         this.rooms = rooms;
     }
-
-    public HotelAdministrator getHotelAdministrator() {
-        return hotelAdministrator;
     }
 
-    public void setHotelAdministrator(HotelAdministrator hotelAdministrator) {
-        this.hotelAdministrator = hotelAdministrator;
-    }
-}

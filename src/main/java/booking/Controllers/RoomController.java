@@ -34,15 +34,7 @@ public class RoomController {
         }
     }
 
-    @GetMapping("/availableRooms")
-    public ResponseEntity<?> getAllAvailableRooms(@RequestParam LocalDate startDate, @RequestParam LocalDate endDate) {
-        try {
-            List<RoomResponseDTO> availableRooms = roomService.getAvailableRooms(startDate, endDate);
-            return ResponseEntity.ok(availableRooms); // va returna lista de RoomResponseDTO corect serializată
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Nu există camere disponibile în perioada aleasă");
-        }
-    }
+
 
     @GetMapping("/availableRoomsBetweenDates")
     public ResponseEntity<?> findAvailableRoomsBetweenDates(@RequestParam LocalDate startDate, @RequestParam LocalDate endDate) {

@@ -29,7 +29,6 @@ public class RoomService {
         this.reservationService = reservationService;
     }
 
-
     @Transactional
     public List<RoomResponseDTO> findAll() {
         return roomRepository.findAll().stream()

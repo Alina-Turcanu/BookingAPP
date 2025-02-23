@@ -23,16 +23,16 @@ public class Room {
     @Column
     private int capacity;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private RoomType roomType;
 
     @OneToMany(mappedBy = "room")
     private List<Reservation> reservations = new ArrayList<>();
 
     @ManyToOne
-    @JoinColumn(name = "hotel_id")
-    @JsonIgnore
+    @JoinColumn(name = "hotel_id", nullable = false)
+//    @JsonIgnore
     private Hotel hotel;
 
 

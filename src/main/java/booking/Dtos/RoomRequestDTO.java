@@ -5,6 +5,7 @@ import booking.Entities.RoomType;
 public class RoomRequestDTO {
 
    private int roomNumber;
+
    private String roomType;
 
    private int pricePerNight;
@@ -17,7 +18,6 @@ public class RoomRequestDTO {
       this.roomType = roomType;
       this.pricePerNight = pricePerNight;
       this.capacity = capacity;
-     // this.hotelId = hotelId;
    }
 
    public int getRoomNumber() {

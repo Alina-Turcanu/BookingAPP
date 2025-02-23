@@ -1,13 +1,11 @@
 package booking.Controllers;
 
 
-import booking.Dtos.ReservationRequestDTO;
-import booking.Dtos.ReservationResponseDTO;
-import booking.Dtos.ReservationResponseDTObyRoomType;
-import booking.Dtos.UserRequestDTO;
+import booking.Dtos.*;
 import booking.Entities.Reservation;
 import booking.Entities.RoomType;
 import booking.Entities.User;
+import booking.Services.ReservationService;
 import booking.Services.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,35 +21,13 @@ import java.util.List;
 public class UserController {
 
     UserService userService;
+    ReservationService reservationService;
 
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, ReservationService reservationService) {
         this.userService = userService;
+        this.reservationService = reservationService;
     }
-
-    @PostMapping("/addUser")
-    public ResponseEntity<?> addUser(@RequestBody UserRequestDTO userRequestDTO) {
-        try {
-            User user = userService.addUser(userRequestDTO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(user);
-        } catch (Exception e) {
-            // Logăm excepția
-            e.printStackTrace();
-            // Returnăm un răspuns de eroare
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("A apărut o eroare: " + e.getMessage());
-        }
-    }
-
-//    public List<Room> sortAvailableRoomsByPriceAndNumberOfPeople(LocalDate startDay, LocalDate endDay, double pricePerNight, int capacity) {
-//        return userService.sortAvailableRoomsByPriceAndNumberOfPeople(startDay, endDay, pricePerNight, capacity);
-//    }
-
-//   @PostMapping("/createReservation")
-//   public ResponseEntity<Reservation> makeReservationByRoomType(@RequestBody ReservationRequestDTO reservationRequestDTO){
-//        Reservation reservation=userService.makeReservationByRoomType(reservationRequestDTO);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(reservation);
-//   }
 
     @PostMapping("/bookRoom")
     public ResponseEntity<ReservationResponseDTO> bookRoom(@RequestBody ReservationRequestDTO reservationRequestDTO) {
@@ -76,20 +52,8 @@ public class UserController {
         }
     }
 
-//
-//    @GetMapping("/sortRooms/startDate/endDate/pricePerNight/capacity")
-//    public List<Room> sortAvailableRooms(@RequestParam LocalDate startDate,@RequestParam LocalDate endDate,@RequestParam double pricePerNight,@RequestParam int capacity) {
-//        return userService.sortAvailableRoomsByPriceAndNumberOfPeople(startDate,endDate,pricePerNight,capacity);
-//    }
-
-//    @GetMapping("/availableRooms")
-//    public ResponseEntity<List<Room>> getAvailableRooms(@RequestParam LocalDate startDate, @RequestParam LocalDate endDate,@RequestParam int numberOfPersons) {
-//        List<Room> availableRooms =userService.sortAvailableRoomsByPriceAndNumberOfPeople(startDate,endDate,numberOfPersons);
-//        return ResponseEntity.ok(availableRooms);
-//    }
-
     @PostMapping("/bookRoomByRoomType")
-    public ResponseEntity<ReservationResponseDTObyRoomType> bookRoomByType(@RequestParam RoomType roomType,@RequestParam LocalDate firstDay,@RequestParam LocalDate lastDay,@RequestParam Long userId,@RequestParam Long hotelId) {
+    public ResponseEntity<ReservationResponseDTObyRoomType> bookRoomByType(@RequestParam RoomType roomType, @RequestParam LocalDate firstDay, @RequestParam LocalDate lastDay, @RequestParam Long userId, @RequestParam Long hotelId) {
 
         try {
             // Apelăm serviciul pentru a rezerva o cameră
@@ -99,10 +63,8 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.CREATED).body(reservationResponseDTO);
 
         } catch (IllegalArgumentException e) {
-            // Dacă nu au fost camere disponibile sau dacă a apărut o altă eroare de validare
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         } catch (Exception e) {
-            // Dacă apare o eroare neașteptată
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -115,6 +77,23 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Nu exista rezervari pentru acest user");
         }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> cancelReservation(@PathVariable Long id) {
+        try {
+            reservationService.cancelReservation(id);
+            return ResponseEntity.ok("Rezervarea cu id-ul " + id + " a fost ștearsă cu succes.");
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rezervarea cu ID-ul " + id + " nu a fost găsită.");
+
+        }
+    }
+
+    @GetMapping("/findLoggedInUser")
+   public ResponseEntity<UserResponseDTO> findLoggedInUser(){
+        UserResponseDTO user= userService.findLoggedInUser();
+        return ResponseEntity.ok(user);
     }
 }
 

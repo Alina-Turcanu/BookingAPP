@@ -32,22 +32,16 @@ public class Reservation {
     @JoinColumn(name = "hotel_id")
     private Hotel hotel;
 
-    @ManyToOne
-    @JoinColumn(name = "hotelAdministrator")
-    private HotelAdministrator hotelAdministrator;
-
-
     public Reservation() {
     }
 
-    public Reservation(long reservationId, Room room, LocalDate startDate, LocalDate endDate, User user, Hotel hotel, HotelAdministrator hotelAdministrator) {
+    public Reservation(long reservationId, Room room, LocalDate startDate, LocalDate endDate, User user, Hotel hotel) {
         this.reservationId = reservationId;
         this.room = room;
         this.startDate = startDate;
         this.endDate = endDate;
         this.user = user;
         this.hotel = hotel;
-        this.hotelAdministrator = hotelAdministrator;
     }
 
     public long getReservationId() {
@@ -97,13 +91,6 @@ public class Reservation {
     public void setHotel(Hotel hotel) {
         this.hotel = hotel;
     }
-
-    public HotelAdministrator getHotelAdministrator() {
-        return hotelAdministrator;
     }
 
-    public void setHotelAdministrator(HotelAdministrator hotelAdministrator) {
-        this.hotelAdministrator = hotelAdministrator;
-    }
-}
 

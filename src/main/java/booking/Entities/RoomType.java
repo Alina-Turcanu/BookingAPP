@@ -4,7 +4,7 @@ import jakarta.persistence.Entity;
 
 
 public enum RoomType {
-    doubleRoom(2),singleRoom(1),familyRoom(4),tweenRoom(2),suiteRoom(6);
+    standardRoom(2),singleRoom(1),familyRoom(4),suiteRoom(6);
 
     private final int maxCapacity;
 

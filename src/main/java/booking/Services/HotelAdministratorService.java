@@ -19,7 +19,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -41,6 +40,7 @@ public class HotelAdministratorService {
         this.reservationRepository = reservationRepository;
     }
 
+
     @Transactional
     public Hotel addHotel(HotelRequestDTO hotelRequestDTO) {
         Hotel hotel = new Hotel();
@@ -51,13 +51,12 @@ public class HotelAdministratorService {
     @Transactional
     public RoomResponseDTO addRoom(Long hotelId, RoomRequestDTO roomRequestDTO) {
         Map<RoomType, Integer> roomTypeCapacities = Map.of(
+                RoomType.standardRoom,2,
                 RoomType.singleRoom, 1,
-                RoomType.doubleRoom, 2,
-                RoomType.suiteRoom, 6,
-                RoomType.tweenRoom, 2,
-                RoomType.familyRoom, 4
-        );
+                RoomType.familyRoom,4,
+                RoomType.suiteRoom,6
 
+        );
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new EntityNotFoundException("Hotelul cu ID-ul " + hotelId + " nu a fost găsit."));
 
